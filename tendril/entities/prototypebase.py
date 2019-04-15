@@ -23,6 +23,8 @@ Docstring for prototypebase
 """
 from copy import copy
 
+from tendril.conventions import status
+from tendril.dox.labelmaker import manager
 from tendril.validation.base import ValidatableBase
 from tendril.validation.files import MissingFileError
 from tendril.validation.files import MangledFileError
@@ -59,7 +61,10 @@ class PrototypeBase(ValidatableBase):
     @property
     def status(self):
         if self._status is None:
-            self._get_status()
+            st = self._get_status()
+            if not isinstance(st, status.Status):
+                st = status.get_status(st)
+            self._status = st
         return self._status
 
     def _get_status(self):
@@ -82,8 +87,21 @@ class PrototypeBase(ValidatableBase):
             )
         return self._strategy
 
-    def make_labels(self, sno, label_manager=None):
+    @property
+    def labels(self):
         raise NotImplementedError
+
+    def labelinfo(self, sno):
+        raise NotImplementedError
+
+    def make_labels(self, sno, label_manager=None):
+        if label_manager is None:
+            label_manager = manager
+        labelinfo = self.labelinfo(sno)
+        if labelinfo is not None:
+            for l in self.labels:
+                label_manager.add_label(
+                    l.type, self.name, labelinfo[0], **labelinfo[1])
 
     @property
     def changelog(self):
