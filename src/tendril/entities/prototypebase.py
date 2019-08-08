@@ -19,7 +19,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Docstring for prototypebase
+Primitives for Entity Prototypes
+--------------------------------
+
 """
 from copy import copy
 
