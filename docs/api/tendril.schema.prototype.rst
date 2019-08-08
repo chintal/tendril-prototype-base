@@ -1,5 +1,5 @@
 
-.. automodule:: tendril.schema.identity_persona
+.. automodule:: tendril.schema.prototype
     :members:
     :undoc-members:
     :show-inheritance:
