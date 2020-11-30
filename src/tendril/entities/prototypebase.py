@@ -22,11 +22,17 @@
 Primitives for Entity Prototypes
 --------------------------------
 
+Unhandled changes :
+
+bom, obom changed to sbom, bom
+class names changed
+changelog property implementation fleshed out
+
 """
 from copy import copy
 
 from tendril.conventions import status
-from tendril.dox.labelmaker import manager
+from tendril.dox.labelmaker import manager as labelmanager
 from tendril.validation.base import ValidatableBase
 from tendril.validation.files import MissingFileError
 from tendril.validation.files import MangledFileError
@@ -43,8 +49,11 @@ class MissingInformationError(Exception):
 
 
 class PrototypeBase(ValidatableBase):
-    def __init__(self):
-        super(PrototypeBase, self).__init__()
+    _label_name_property = 'ident'
+    _can_have_changelog = False
+
+    def __init__(self, **kwargs):
+        super(PrototypeBase, self).__init__(**kwargs)
         self._status = None
         self._strategy = None
 
@@ -73,18 +82,10 @@ class PrototypeBase(ValidatableBase):
         raise NotImplementedError
 
     @property
-    def bom(self):
-        raise NotImplementedError
-
-    @property
-    def obom(self):
-        raise NotImplementedError
-
-    @property
     def strategy(self):
         if self._strategy is None:
             raise MissingInformationError(
-                "Production strategy information missing for {0}"
+                "Production / Procurement strategy information missing for {0}"
                 "".format(self.ident)
             )
         return self._strategy
@@ -98,15 +99,28 @@ class PrototypeBase(ValidatableBase):
 
     def make_labels(self, sno, label_manager=None):
         if label_manager is None:
-            label_manager = manager
+            label_manager = labelmanager
         labelinfo = self.labelinfo(sno)
         if labelinfo is not None:
             for l in self.labels:
                 label_manager.add_label(
-                    l.type, self.name, labelinfo[0], **labelinfo[1])
+                    l.type, getattr(self, self._label_name_property),
+                    labelinfo[0], **labelinfo[1])
 
     @property
     def changelog(self):
+        if not self._can_have_changelog:
+            return None
+
+        if self._changelog:
+            return self._changelog
+
+        try:
+            self._get_changelog()
+        except (changelog.ChangeLogNotFoundError,
+                changelog.ChangeLogParseError):
+            return None
+
         return self._changelog
 
     @property
@@ -120,6 +134,8 @@ class PrototypeBase(ValidatableBase):
         return FilePolicy(ctx, self._changelogpath, False)
 
     def _get_changelog(self):
+        if not self._can_have_changelog:
+            return
         try:
             self._changelog = changelog.ChangeLog(self._changelogpath)
         except changelog.ChangeLogNotFoundError:
@@ -134,4 +150,20 @@ class PrototypeBase(ValidatableBase):
         raise NotImplementedError
 
     def _validate(self):
+        raise NotImplementedError
+
+
+class CompositePrototype(PrototypeBase):
+    @property
+    def sbom(self):
+        raise NotImplementedError
+
+    @property
+    def bom(self):
+        raise NotImplementedError
+
+
+class StructuredPrototype(CompositePrototype):
+    @property
+    def psl(self):
         raise NotImplementedError
